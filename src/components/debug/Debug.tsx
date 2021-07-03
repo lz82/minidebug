@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import Taro from '@tarojs/taro'
 import { View, CoverView, CoverImage } from '@tarojs/components'
-import { AtList, AtListItem, AtActionSheet, AtActionSheetItem, } from 'taro-ui'
+import { AtList, AtListItem, AtActionSheet, AtActionSheetItem } from 'taro-ui'
 import { Menu, ENV } from '../../types/DebugTypes'
 import { FEATURE, HOME_OPERATION_LIST, HOME_MENU, ENV_LIST } from '../../utils/consants'
 
@@ -13,7 +13,9 @@ import Storage from '../../components/storage/Storage'
 
 const app = Taro.getApp()
 
-type Props = {}
+type Props = {
+  onEnvChange?: (env: string) => void
+}
 
 type State = {
   menuList: Array<Menu>
@@ -36,7 +38,7 @@ export default class Debug extends Component<Props, State> {
       hideHomeMenu: false,
     }
   }
-  componentDidMount () {
+  componentDidMount() {
     if (!app.globalData) {
       app.globalData = {}
     }
@@ -50,10 +52,10 @@ export default class Debug extends Component<Props, State> {
         success: res => {
           app.globalData.initialLocation = {
             latitude: res.latitude,
-            longitude: res.longitude
+            longitude: res.longitude,
           }
           Taro.setStorageSync('location', app.globalData.initialLocation)
-        }
+        },
       })
     }
   }
@@ -64,7 +66,7 @@ export default class Debug extends Component<Props, State> {
         // 请求完新版本信息的回调
         Taro.showModal({
           title: '更新提示',
-          content: '当前已经是最新版本'
+          content: '当前已经是最新版本',
         })
       }
     })
@@ -77,7 +79,7 @@ export default class Debug extends Component<Props, State> {
             // 新的版本已经下载好，调用 applyUpdate 应用新版本并重启
             updateManager.applyUpdate()
           }
-        }
+        },
       })
     })
     updateManager.onUpdateFailed(function() {
@@ -90,10 +92,10 @@ export default class Debug extends Component<Props, State> {
   }
   onScan = () => {
     Taro.scanCode({
-      success: (res) => {
+      success: res => {
         console.log('scan result...', res)
-        res.path && Taro.reLaunch({ url:`/${res.path}` })
-      }
+        res.path && Taro.reLaunch({ url: `/${res.path}` })
+      },
     })
   }
   showAddPopup = () => {
@@ -110,11 +112,11 @@ export default class Debug extends Component<Props, State> {
     Taro.openSetting({
       success: function(res) {
         console.log(res)
-      }
+      },
     })
   }
-  handleMenuClicked = (event) => {
-    const { type, } = event.currentTarget.dataset.item
+  handleMenuClicked = event => {
+    const { type } = event.currentTarget.dataset.item
     this.setState({ featureType: type })
     if (type === FEATURE.CHANGE_ENV) {
       this.onChangeEnv()
@@ -124,49 +126,45 @@ export default class Debug extends Component<Props, State> {
       this.onUpdate()
     }
   }
-  handleChangeEnv = (env) => {
-    Taro.setStorage({
-      key: 'env',
-      data: env,
-      success: () => {
-        Taro.showModal({
-          title: '提示',
-          content: '环境设置成功，应用即将重启',
-          confirmText: '知道了',
-          showCancel: false,
-          success: res => {
-            if (res.confirm) {
-              // reLaunch不走app.js了
-              Taro.getApp().needResetHttp = true
-              Taro.reLaunch({ url: '/pages/index/index' })
-            }
-          }
-        })
+  handleChangeEnv = env => {
+    Taro.showModal({
+      title: '提示',
+      content: '环境设置成功，应用即将重启',
+      confirmText: '知道了',
+      showCancel: false,
+      success: res => {
+        if (res.confirm) {
+          // reLaunch不走app.js了
+          // Taro.getApp().needResetHttp = true
+          this.props.onEnvChange && this.props.onEnvChange(env)
+          Taro.reLaunch({ url: '/pages/index/index' })
+        }
       },
-      complete: () => {
-        this.closeAll()
-      }
     })
   }
 
   onShowHomeMenu = () => {
-    this.setState({ hideHomeMenu: false, })
+    this.setState({ hideHomeMenu: false })
   }
   onHideHomeMenu = () => {
-    this.setState({ hideHomeMenu: true, })
+    this.setState({ hideHomeMenu: true })
   }
 
-  render () {
-    const { menuList, showPopup, envList, curEnv, featureType, hideHomeMenu, } = this.state
+  render() {
+    const { menuList, showPopup, envList, curEnv, featureType, hideHomeMenu } = this.state
     const showDebugMenu = HOME_OPERATION_LIST.indexOf(featureType) > -1
     return (
-      <View className='debug-container'>
+      <View className="debug-container">
         {!showDebugMenu && !hideHomeMenu && (
-          <CoverView className='home-container'>
+          <CoverView className="home-container">
             <CoverImage
-              className='home-img'
-              src={'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFEklEQVR4Xu1aXYgcRRCumt23E25BRMQIkaigRo1ESfAHNhAOInrX1eve+SB5iQpBJREUFUUIin9wRoKK6D2cP/HBuZvuzaEigh6IETXBgBoQQwxKOFBzKCgRWaakYU7WzfTO7PzdXG4X7uWmq776vqmu7q4ehFX+w1XOHwYCDDJglSswmAKrPAEGRTC3KUBE6xHxfma+BxGfB4DPPM87ULaMy0UAKeVmZn4TAC7tIDyvlNpy1gsgpdwakL+gm6zv+1e3Wq1vyiRCphkghBCI+BYAnBNC8ohS6toykTexZCaAEOLOgHwYR2ZmqbXWZ6UAQoidiPiKhdw/zDxRRvKZZAARPQQApsqf8UPEvwBgwvO898r25pfiSTUFiGgPADxhIfcHADSVUh+VlXyqDCCiFwDgAQu535i5qbWeLzP5xAIQ0esAcJeF3EKlUrl9ZmbmYNnJ9y1AvV6v1mq1txFxwkLuZ0RseJ731Uog35cAQoia4zj7mfkWC7njzNzQWh9ZKeRjCyClXMPM7wDAzRZy3zuO05idnf1uJZGPJQARXQ4AhvyGZSC3yMyLjuOc8n3/MCLODQ8Pz09PT/+dVSyRy6CU8mlmfjQrwAz8/AoA77bb7cm5ubkf0/qLFICIOC1ITvYLiDjped5kGv+RAggh9plzfRqQnG0/rlar213XPZkEJ44A28zcA4BKEoCCbE4zc11r/WW/eJECGIdCCCOCKYQ1C4Bi5n39gscYvxERNwKA+bssajwzX6y1PhE1rvN5LAGMARHdFKwGF4UBMPOHtVpNZFmhO3GEEGvNUsvMz/XIxpPMvF5r/XtcEWILEIhwTSDCFRaAT41WSqlTcQPod5wQYgMivgYA14fZIqL2PI/i+u1LgGA6rAOA/Yi4yRLAoUql0nBd96e4QSQZJ4TYjYh7LTE8GHd16FsAAzg6Onq+4zjmTLDVEvxR3/ebrVbraBJycW2klKbrHFZ7Ftrt9o1x9gmJBDABjoyMDA0NDZn+ny3dTiDieN4HIyJ6HwC2hYj2slLqvigxEwuw5JiI3gCA7RagX4J2WG59gWazeUm73f4hBH+xWq2ucV33dC8RUgsQFMeXAOBeC9CfiHhHnm2xHlOhoZTychcgEOFZAHjYAuYjIuV1MySEWIeIx0Kwp5RSdxciQLBCPI6IT1oAc70ZIiIjgFmh/vsh4hee520uTIBAhF2I+GIYKDNvyatPSEQm1f9XkJn5mNa683rujLAyqQHdXqWUO5h5quv/h5VS10VV5aTPiegRAHimy35RKXVuoRmwBCalnGBmc2dg9vHzzLwnr7cfZF4dET/pJquU6vmSc8mAziCEEOaUltsy2LEclysDkqZyUrtS1YCkJNLYlWYVSEMiqW1p9gFJCaS163EyLG4nmJZEUvugP/B1iH1xZ4GkwWdhR0TfAsCVIb6KOQ1mQSKpDyHEFCLuCLHPvx+QNOis7KSUB5j5tjB/iJhvRygrEkn8ENGtAPAqAFxosXeVUuNxfee+E4wbSNS4oCs8HnSFbcM/V0rdEOWr83lsAcbGxq5CxJ4Hi36AY47t614gat8fOl2iAgm+/dsFAPWoscv1PM6x1xZbZAZIKfcy8+7lIhcD9wOllO2jjUjzSAGIyFxBr430VPyAYm6HiegxAHiqeH5WxGK/DzDnefO9HyI2AeC8goVY/i9ECiZcOFxkDSg8ooIBBwIULHjp4AYZULpXUnBAgwwoWPDSwf0LvhPSUKrDqO0AAAAASUVORK5CYII='}
-              onClick={() => { this.setState({ featureType: -1 }) }}
+              className="home-img"
+              src={
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFEklEQVR4Xu1aXYgcRRCumt23E25BRMQIkaigRo1ESfAHNhAOInrX1eve+SB5iQpBJREUFUUIin9wRoKK6D2cP/HBuZvuzaEigh6IETXBgBoQQwxKOFBzKCgRWaakYU7WzfTO7PzdXG4X7uWmq776vqmu7q4ehFX+w1XOHwYCDDJglSswmAKrPAEGRTC3KUBE6xHxfma+BxGfB4DPPM87ULaMy0UAKeVmZn4TAC7tIDyvlNpy1gsgpdwakL+gm6zv+1e3Wq1vyiRCphkghBCI+BYAnBNC8ohS6toykTexZCaAEOLOgHwYR2ZmqbXWZ6UAQoidiPiKhdw/zDxRRvKZZAARPQQApsqf8UPEvwBgwvO898r25pfiSTUFiGgPADxhIfcHADSVUh+VlXyqDCCiFwDgAQu535i5qbWeLzP5xAIQ0esAcJeF3EKlUrl9ZmbmYNnJ9y1AvV6v1mq1txFxwkLuZ0RseJ731Uog35cAQoia4zj7mfkWC7njzNzQWh9ZKeRjCyClXMPM7wDAzRZy3zuO05idnf1uJZGPJQARXQ4AhvyGZSC3yMyLjuOc8n3/MCLODQ8Pz09PT/+dVSyRy6CU8mlmfjQrwAz8/AoA77bb7cm5ubkf0/qLFICIOC1ITvYLiDjped5kGv+RAggh9plzfRqQnG0/rlar213XPZkEJ44A28zcA4BKEoCCbE4zc11r/WW/eJECGIdCCCOCKYQ1C4Bi5n39gscYvxERNwKA+bssajwzX6y1PhE1rvN5LAGMARHdFKwGF4UBMPOHtVpNZFmhO3GEEGvNUsvMz/XIxpPMvF5r/XtcEWILEIhwTSDCFRaAT41WSqlTcQPod5wQYgMivgYA14fZIqL2PI/i+u1LgGA6rAOA/Yi4yRLAoUql0nBd96e4QSQZJ4TYjYh7LTE8GHd16FsAAzg6Onq+4zjmTLDVEvxR3/ebrVbraBJycW2klKbrHFZ7Ftrt9o1x9gmJBDABjoyMDA0NDZn+ny3dTiDieN4HIyJ6HwC2hYj2slLqvigxEwuw5JiI3gCA7RagX4J2WG59gWazeUm73f4hBH+xWq2ucV33dC8RUgsQFMeXAOBeC9CfiHhHnm2xHlOhoZTychcgEOFZAHjYAuYjIuV1MySEWIeIx0Kwp5RSdxciQLBCPI6IT1oAc70ZIiIjgFmh/vsh4hee520uTIBAhF2I+GIYKDNvyatPSEQm1f9XkJn5mNa683rujLAyqQHdXqWUO5h5quv/h5VS10VV5aTPiegRAHimy35RKXVuoRmwBCalnGBmc2dg9vHzzLwnr7cfZF4dET/pJquU6vmSc8mAziCEEOaUltsy2LEclysDkqZyUrtS1YCkJNLYlWYVSEMiqW1p9gFJCaS163EyLG4nmJZEUvugP/B1iH1xZ4GkwWdhR0TfAsCVIb6KOQ1mQSKpDyHEFCLuCLHPvx+QNOis7KSUB5j5tjB/iJhvRygrEkn8ENGtAPAqAFxosXeVUuNxfee+E4wbSNS4oCs8HnSFbcM/V0rdEOWr83lsAcbGxq5CxJ4Hi36AY47t614gat8fOl2iAgm+/dsFAPWoscv1PM6x1xZbZAZIKfcy8+7lIhcD9wOllO2jjUjzSAGIyFxBr430VPyAYm6HiegxAHiqeH5WxGK/DzDnefO9HyI2AeC8goVY/i9ECiZcOFxkDSg8ooIBBwIULHjp4AYZULpXUnBAgwwoWPDSwf0LvhPSUKrDqO0AAAAASUVORK5CYII='
+              }
+              onClick={() => {
+                this.setState({ featureType: -1 })
+              }}
             ></CoverImage>
           </CoverView>
         )}
@@ -181,13 +179,24 @@ export default class Debug extends Component<Props, State> {
                   e.currentTarget.dataset.item = item
                   this.handleMenuClicked(e)
                 }}
-                note={item.title !== '环境切换' ? item.desc : (curEnv ? `当前环境：${curEnv}` : '环境切换')}
+                note={
+                  item.title !== '环境切换'
+                    ? item.desc
+                    : curEnv
+                    ? `当前环境：${curEnv}`
+                    : '环境切换'
+                }
                 hasBorder
               />
             ))}
           </AtList>
         )}
-        <AtActionSheet isOpened={showPopup} onClose={this.closeAll} cancelText='取消' title='测试、预发、正式环境动态切换' >
+        <AtActionSheet
+          isOpened={showPopup}
+          onClose={this.closeAll}
+          cancelText="取消"
+          title="测试、预发、正式环境动态切换"
+        >
           {envList.map(item => (
             <AtActionSheetItem
               key={item.env}
@@ -200,18 +209,10 @@ export default class Debug extends Component<Props, State> {
           ))}
         </AtActionSheet>
 
-        {featureType === FEATURE.CHANGE_PIN && (
-          <ChangePin />
-        )}
-        {featureType === FEATURE.GET_APP_INFO && (
-          <AppInformation />
-        )}
-        {featureType === FEATURE.MOCK_POSITION && (
-          <PositionSimulation />
-        )}
-        {featureType === FEATURE.JUMP_H5 && (
-          <H5door />
-        )}
+        {featureType === FEATURE.CHANGE_PIN && <ChangePin />}
+        {featureType === FEATURE.GET_APP_INFO && <AppInformation />}
+        {featureType === FEATURE.MOCK_POSITION && <PositionSimulation />}
+        {featureType === FEATURE.JUMP_H5 && <H5door />}
         {/* 缓存管理 */}
         {featureType === FEATURE.MANAGE_STORAGE && (
           <Storage onShowHomeMenu={this.onShowHomeMenu} onHideHomeMenu={this.onHideHomeMenu} />

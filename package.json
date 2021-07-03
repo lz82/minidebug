@@ -1,6 +1,6 @@
 {
-  "name": "@jdlfe/minidebug-next",
-  "version": "1.0.1",
+  "name": "taro-debug",
+  "version": "1.0.2",
   "private": false,
   "description": "小程序MiniDebug工具",
   "main": "dist/index.js",
